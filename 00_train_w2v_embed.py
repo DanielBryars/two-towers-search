@@ -18,7 +18,7 @@ def compute_embeddings(filename):
   query_vectors = {}
   passage_vectors = {}
 
-  for _, row in tqdm(df.iterrows(), total=len(df))::
+  for _, row in tqdm(df.iterrows(), total=len(df)):
       qid = row['query_id']
       query = row['query']
       positive_matches = row['passages']['passage_text']
