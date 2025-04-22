@@ -6,3 +6,5 @@ gensim
 mypy
 ruff
 black
+datasets
+pyarrow

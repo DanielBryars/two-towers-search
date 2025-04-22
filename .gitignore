@@ -89,3 +89,4 @@ Thumbs.db
 # Pre-trained models
 *.bin
 *.gz
+*.parquet

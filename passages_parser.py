@@ -1,5 +1,7 @@
 import json
+
 import numpy as np
+
 
 def parse__passages_json(json_docs:str):  
     json_data = json.loads(json_docs)
