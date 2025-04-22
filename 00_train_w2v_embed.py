@@ -44,10 +44,11 @@ for filename in ["test-00000-of-00001.parquet", "train-00000-of-00001.parquet","
     pickle.dump((query_vectors, passage_vectors), f)
 
   print(f"uploading '{pickle_filename}' to huggingface")
-  hfapi.upload_folder(
-      folder_path=pickle_filename,
-      repo_id="danbhf/two-towers",
-      repo_type="dataset",
+  hfapi.upload_file(
+    path_or_fileobj=pickle_filename,
+    path_in_repo=pickle_filename,
+    repo_id="danbhf/two-towers",
+    repo_type="dataset",  # or "model" depending on your use
   )
 
 # Load
