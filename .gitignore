@@ -1,0 +1,91 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PyInstaller
+*.manifest
+*.spec
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+
+# Pytest
+.pytest_cache/
+
+# MyPy
+.mypy_cache/
+
+# Environments
+.ipynb_checkpoints/
+.idea/
+.vscode/
+
+# Jupyter Notebook
+*.ipynb_checkpoints
+*.nbconvert.ipynb
+*.nbconvert/
+*.nb.html
+
+# PyCharm
+*.iml
+*.iws
+*.ipr
+.idea/
+
+# VS Code
+.vscode/
+
+# Data and logs
+*.log
+*.out
+*.csv
+*.tsv
+*.hdf5
+*.db
+*.sqlite
+*.pkl
+*.joblib
+
+# Local configuration
+.env
+.env.*
+*.secret
+*.pem
+*.key
+
+# Misc
+.DS_Store
+Thumbs.db
+
+# Pre-trained models
+*.bin
+*.gz

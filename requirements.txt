@@ -1,0 +1,8 @@
+torch 
+wandb 
+numpy
+pandas
+gensim
+mypy
+ruff
+black
