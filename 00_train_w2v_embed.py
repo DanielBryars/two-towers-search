@@ -18,18 +18,12 @@ Creates the following structure:
 }
 '''
 
-hfapi = HfApi(token=os.getenv("HF_TOKEN"))
-
-print ("loading word2vec model...")
-model = api.load("word2vec-google-news-300")
-print ("word2vec model loaded")
-
 def text_to_embedding(text: str, model:KeyedVectors) -> NDArray[np.float32]:
     words = text.lower().split()
     vectors = [model[word] for word in words if word in model]
     return np.mean(vectors, axis=0) if vectors else np.zeros(model.vector_size) # type: ignore
 
-def compute_embeddings(filename):
+def compute_embeddings(filename, model):
   df = pd.read_parquet(filename)
   query_embeddings = []
   positive_embeddings = []
@@ -80,17 +74,27 @@ def build_triplets(queries, positives, seed=42):
         "neg": negatives
     }
 
-if __name__ == "__main__":   
+if __name__ == "__main__":
+  hfapi = HfApi(token=os.getenv("HF_TOKEN"))
+
+  print ("loading word2vec model...")
+  model = api.load("word2vec-google-news-300")
+  print ("word2vec model loaded")
+
   for filename in ["test-00000-of-00001.parquet", "train-00000-of-00001.parquet","validation-00000-of-00001.parquet"]:
     print(f"computing embeddings for '{filename}'")
-    query_embeddings, positive_embeddings = compute_embeddings(filename)
+    query_embeddings, positive_embeddings = compute_embeddings(filename, model)
+    print("computing embeddings complete")
 
+    print("building triplets")
     triplets = build_triplets(query_embeddings, positive_embeddings)
+    print("building triplets complete")
 
     pickle_filename = f"{filename}.triplet.embeddings.pkl" 
     print(f"saving triplets embeddings to '{pickle_filename}'")
     with open(pickle_filename, "wb") as f:
       pickle.dump(triplets, f)
+    print("saving pickle complete")
 
     print(f"uploading '{pickle_filename}' to huggingface")
     hfapi.upload_file(
@@ -99,7 +103,8 @@ if __name__ == "__main__":
       repo_id="danbhf/two-towers",
       repo_type="dataset",  # or "model" depending on your use
     )
-
+    print("upload complete")
+    
 # Example Load
 #with open("vectors.pkl", "rb") as f:
 #    triplets = pickle.load(f)
