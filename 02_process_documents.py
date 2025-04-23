@@ -57,7 +57,7 @@ if __name__ == "__main__":
      filepath = "checkpoints/2025_04_23__12_47_41.9.twotower.pth"
 
   print ("loading word2vec model...")
-  model = api.load("word2vec-google-news-300")
+  w2v_model = api.load("word2vec-google-news-300")
   print ("word2vec model loaded")
 
   queryModel, docModel = load_checkpoint(filepath)
@@ -85,13 +85,13 @@ if __name__ == "__main__":
     df = pd.read_parquet(parquet_filename)  
     for row in tqdm(df.itertuples(index=False), total=len(df), desc=f"Processing {parquet_filename}", leave=False):
       for passage in row.passages['passage_text']: # type: ignore
-        passage_embedding = text_to_embedding(passage, model) # type: ignore
+        passage_embedding = text_to_embedding(passage, w2v_model) # type: ignore
         with torch.no_grad():
-          docModel_embedding = docModel(passage_embedding) 
+          passage_tensor = torch.from_numpy(passage_embedding).unsqueeze(0)  # shape (1, 300)
+          docModel_embedding = docModel(passage_tensor).squeeze(0).numpy()
           embeddings[i] = docModel_embedding
         documents.append(passage)
         i+=1
-
 
   with open("documentEmbeddings.pkl", "wb") as f:
     pickle.dump((embeddings, documents), f)
