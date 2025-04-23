@@ -56,6 +56,8 @@ if __name__ == "__main__":
   else:
      filepath = "checkpoints/2025_04_23__12_47_41.9.twotower.pth"
 
+  hfapi = HfApi(token=os.getenv("HF_TOKEN"))
+
   print ("loading word2vec model...")
   w2v_model = api.load("word2vec-google-news-300")
   print ("word2vec model loaded")
@@ -93,8 +95,16 @@ if __name__ == "__main__":
         documents.append(passage)
         i+=1
 
-  with open("documentEmbeddings.pkl", "wb") as f:
+  pickle_filename = "documentEmbeddings.pkl"
+  with open(pickle_filename, "wb") as f:
     pickle.dump((embeddings, documents), f)
 
-
+    print(f"uploading '{pickle_filename}' to huggingface")
+    hfapi.upload_file(
+      path_or_fileobj=pickle_filename,
+      path_in_repo=pickle_filename,
+      repo_id="danbhf/two-towers",
+      repo_type="dataset",  # or "model" depending on your use
+    )
+    print("upload complete")
 
