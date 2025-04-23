@@ -111,13 +111,35 @@ hyperparameters = {
         'num_epochs': 10,        
         'word2vec_dim': 300,
         'embedding_dim': 128,
-        'loss_function': 'nn_triplet_margin_loss',
+        'loss_function': 'contrastive_cosine_loss',#'nn_triplet_margin_loss',
         'margin':0.2,
         'p':2,
         'patience': 3
 }
 
-loss_fn = TripletMarginLoss(margin=hyperparameters['margin'], p=hyperparameters['p'])
+def contrastive_cosine_loss(query, positive, negative, margin=0.2):
+    """
+    Computes contrastive loss based on cosine similarity.
+
+    Loss = max(0, margin - cos(q, d⁺) + cos(q, d⁻))
+
+    Args:
+        query (Tensor): Query embeddings, shape (batch_size, dim)
+        positive (Tensor): Positive document embeddings, shape (batch_size, dim)
+        negative (Tensor): Negative document embeddings, shape (batch_size, dim)
+        margin (float): Margin value
+
+    Returns:
+        Tensor: Scalar loss
+    """
+    sim_pos = F.cosine_similarity(query, positive)
+    sim_neg = F.cosine_similarity(query, negative)
+    loss = F.relu(margin - sim_pos + sim_neg)
+    return loss.mean()
+
+#loss_fn = TripletMarginLoss(margin=hyperparameters['margin'], p=hyperparameters['p'])
+
+loss_fn = contrastive_cosine_loss
 
 wandb.init(
     project='mlx7-week2-two-towers',
