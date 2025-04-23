@@ -115,6 +115,9 @@ val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=256)
 queryModel = model.QueryTower()
 docModel = model.DocTower()
 
+queryModel.to(device)
+docModel.to(device)
+
 print('queryModel:params', sum(p.numel() for p in queryModel.parameters()))
 print('docModel:params', sum(p.numel() for p in docModel.parameters()))
 
@@ -150,31 +153,3 @@ for epoch in range(1, num_epochs + 1):
     break
 
 wandb.finish()
-
-'''
-
-for epoch in range(NUM_EPOCHS):
-  prgs = tqdm.tqdm(dl, desc=f'Epoch {epoch+1}', leave=False)
-  for i, (ipt, trg) in enumerate(prgs):
-    ipt, trg = ipt.to(dev), trg.to(dev)
-    opFoo.zero_grad()
-    out = mFoo(ipt)
-    loss = criterion(out, trg.squeeze())
-    loss.backward()
-    opFoo.step()
-    wandb.log({'loss': loss.item()})
-    if i % 10_000 == 0: evaluate.topk(mFoo)
-
-  # checkpoint
-  checkpoint_name = f'{ts}.{epoch + 1}.cbow.pth'
-  torch.save(mFoo.state_dict(), f'./checkpoints/{checkpoint_name}')
-  artifact = wandb.Artifact('model-weights', type='model')
-  artifact.add_file(f'./checkpoints/{checkpoint_name}')
-  wandb.log_artifact(artifact)
-
-
-#
-#
-#
-
-'''
