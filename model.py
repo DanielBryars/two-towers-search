@@ -1,5 +1,22 @@
 import torch
 import torch.nn as nn
+import os
+import numpy as np
+import sys
+import torch
+import os
+import pandas as pd
+from tqdm import tqdm
+import sys
+import pickle
+import os
+import gensim.downloader as api
+from gensim.models import KeyedVectors 
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
+from numpy.typing import NDArray
+from tqdm import tqdm
 
 EMBEDDING_DIM = 300
 OUTPUT_DIM = 128
@@ -29,6 +46,29 @@ class QueryTower(nn.Module):
 
     def forward(self, x):
         return self.fc(x)
+
+def text_to_embedding(text: str, model: KeyedVectors) -> NDArray[np.float32]:
+    words = text.lower().split()
+    vectors = [model[word] for word in words if word in model]
+    if not vectors:
+        return np.zeros(model.vector_size, dtype=np.float32)
+    return np.mean(vectors, axis=0).astype(np.float32)
+
+def load_checkpoint(checkpoint_path):
+    if not os.path.isfile(checkpoint_path):
+        raise FileNotFoundError(f"Checkpoint not found at: {checkpoint_path}")
+
+    print(f"loading model checkpoint:'{checkpoint_path}'")
+    docModel = DocTower()
+    queryModel = QueryTower()
+
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')  # or 'cuda' if using GPU
+    queryModel.load_state_dict(checkpoint['queryModel'])
+    docModel.load_state_dict(checkpoint['docModel'])
+    
+    queryModel.eval()
+    docModel.eval()
+    return queryModel, docModel
 
 if __name__ == '__main__':
     

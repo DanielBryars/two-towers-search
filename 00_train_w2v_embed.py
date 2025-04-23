@@ -9,6 +9,8 @@ from tqdm import tqdm
 from numpy.typing import NDArray
 from tqdm import tqdm
 
+from model import *
+
 from huggingface_hub import HfApi
 
 
@@ -25,13 +27,6 @@ Creates the following structure:
     "neg": np.ndarray of shape (N, D) #note this is just a randomised list of pos
 }
 '''
-
-def text_to_embedding(text: str, model: KeyedVectors) -> NDArray[np.float32]:
-    words = text.lower().split()
-    vectors = [model[word] for word in words if word in model]
-    if not vectors:
-        return np.zeros(model.vector_size, dtype=np.float32)
-    return np.mean(vectors, axis=0).astype(np.float32)
 
 def compute_embeddings(filename, model):
   df = pd.read_parquet(filename)
