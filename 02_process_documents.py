@@ -16,6 +16,9 @@ from tqdm import tqdm
 from numpy.typing import NDArray
 from tqdm import tqdm
 
+from model import DocTower, QueryTower
+
+
 from huggingface_hub import HfApi
 
 #curl -L -O https://huggingface.co/datasets/microsoft/ms_marco/resolve/main/v1.1/test-00000-of-00001.parquet
@@ -28,8 +31,8 @@ def load_checkpoint(checkpoint_path):
         raise FileNotFoundError(f"Checkpoint not found at: {checkpoint_path}")
 
     print(f"loading model checkpoint:'{checkpoint_path}'")
-    docModel = model.DocTower()
-    queryModel = model.QueryTower()
+    docModel = DocTower()
+    queryModel = QueryTower()
 
     checkpoint = torch.load(checkpoint_path, map_location='cpu')  # or 'cuda' if using GPU
     queryModel.load_state_dict(checkpoint['queryModel'])
@@ -53,7 +56,9 @@ if __name__ == "__main__":
   else:
      filepath = "checkpoints/2025_04_23__12_47_41.9.twotower.pth"
 
+  print ("loading word2vec model...")
   model = api.load("word2vec-google-news-300")
+  print ("word2vec model loaded")
 
   queryModel, docModel = load_checkpoint(filepath)
 
