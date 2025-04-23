@@ -6,6 +6,24 @@ import pickle
 
 
 
+class TripletDataset(torch.utils.data.Dataset):
+    def __init__(self, path_to_pickle):
+        data = pickle.load(open(path_to_pickle, 'rb'))
+        self.q = data["query"]
+        self.p = data["pos"]
+        self.n = data["neg"]
+
+    def __len__(self):
+        return len(self.q)
+
+    def __getitem__(self, idx):
+        return (
+            torch.tensor(self.q[idx], dtype=torch.float32),
+            torch.tensor(self.p[idx], dtype=torch.float32),
+            torch.tensor(self.n[idx], dtype=torch.float32)
+        )
+
+
 class Wiki(torch.utils.data.Dataset):
   def __init__(self):
     self.vocab_to_int = pickle.load(open('./tkn_words_to_ids.pkl', 'rb'))
