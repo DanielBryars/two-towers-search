@@ -1,0 +1,180 @@
+import tqdm
+import wandb
+import torch
+import dataset
+import datetime
+import model
+import torch
+import torch.nn.functional as F
+from torch import nn
+from torch.utils.data import DataLoader
+import wandb
+import time
+import os
+import random
+import numpy as np
+from tqdm import tqdm
+import torch
+import torch.nn.functional as F
+from torch.nn import TripletMarginLoss
+
+def set_seed(seed=42):
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+def train_one_epoch(queryModel, docModel, dataloader, optimizer, device, epoch, step_offset=0):
+    queryModel.train()
+    docModel.train()
+    loss_fn = TripletMarginLoss(margin=0.2, p=2)
+    step = step_offset
+
+    loop = tqdm(dataloader, desc=f"Epoch {epoch} [Train]", leave=False)
+    for batch in loop:
+        query_input, pos_doc_input, neg_doc_input = [x.to(device) for x in batch]
+
+        query_emb = F.normalize(queryModel(query_input), dim=-1)
+        pos_doc_emb = F.normalize(docModel(pos_doc_input), dim=-1)
+        neg_doc_emb = F.normalize(docModel(neg_doc_input), dim=-1)
+
+        loss = loss_fn(query_emb, pos_doc_emb, neg_doc_emb)
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        wandb.log({'train/loss': loss.item()}, step=step)
+        loop.set_postfix(loss=loss.item())
+        step += 1
+
+    return step
+
+def evaluate(queryModel, docModel, dataloader, device, epoch=None, step=None):
+    queryModel.eval()
+    docModel.eval()
+    loss_fn = TripletMarginLoss(margin=0.2, p=2)
+
+    total_loss = 0.0
+    total_batches = 0
+
+    loop = tqdm(dataloader, desc=f"Epoch {epoch} [Val]", leave=False)
+    with torch.no_grad():
+        for batch in loop:
+            query_input, pos_doc_input, neg_doc_input = [x.to(device) for x in batch]
+
+            query_emb = F.normalize(queryModel(query_input), dim=-1)
+            pos_doc_emb = F.normalize(docModel(pos_doc_input), dim=-1)
+            neg_doc_emb = F.normalize(docModel(neg_doc_input), dim=-1)
+
+            loss = loss_fn(query_emb, pos_doc_emb, neg_doc_emb)
+
+            total_loss += loss.item()
+            total_batches += 1
+            loop.set_postfix(loss=loss.item())
+
+    avg_loss = total_loss / total_batches if total_batches > 0 else float('nan')
+    if step is not None:
+        wandb.log({'val/loss': avg_loss}, step=step)
+    return avg_loss
+
+def save_checkpoint(queryModel, docModel, epoch, ts):
+    checkpoint_dir = './checkpoints'
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    checkpoint_name = f'{ts}.{epoch + 1}.twotower.pth'
+    checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
+
+    torch.save({
+        'queryModel': queryModel.state_dict(),
+        'docModel': docModel.state_dict(),
+        'epoch': epoch,
+    }, checkpoint_path)
+
+    # Create wandb artifact and log it
+    artifact = wandb.Artifact('model-weights', type='model', description='Two-tower model weights')
+    artifact.add_file(checkpoint_path)
+    wandb.log_artifact(artifact)
+
+dataset.download_pickles_from_hugginface()
+set_seed()
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+ts = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M_%S')
+wandb.init(project='mlx7-week2-two-towers', name=f'{ts}')
+
+train_dataset = dataset.TripletDataset("train-00000-of-00001.parquet.triplet.embeddings.pkl")
+train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=256)
+
+val_dataset = dataset.TripletDataset("validation-00000-of-00001.parquet.triplet.embeddings.pkl")
+val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=256)
+
+
+queryModel = model.QueryTower()
+docModel = model.DocTower()
+
+print('queryModel:params', sum(p.numel() for p in queryModel.parameters()))
+print('docModel:params', sum(p.numel() for p in docModel.parameters()))
+
+optimizer = torch.optim.Adam(
+    list(queryModel.parameters()) + list(docModel.parameters()), 
+    lr=2e-5, 
+    weight_decay=0.01
+)
+
+num_epochs = 5
+step = 0
+best_val_loss = float('inf')
+epochs_no_improve = 0
+
+patience=3
+
+for epoch in range(1, num_epochs + 1):
+  step = train_one_epoch(queryModel, docModel, train_loader, optimizer, device, epoch, step_offset=step)
+  val_loss = evaluate(queryModel, docModel, val_loader, device, epoch=epoch, step=step)
+
+  print(f"Epoch {epoch} complete | Val Loss: {val_loss:.4f}")
+
+  if val_loss < best_val_loss:
+    best_val_loss = val_loss
+    epochs_no_improve = 0
+    save_checkpoint(queryModel, docModel, epoch, ts)
+  else:
+    epochs_no_improve += 1
+    print(f"No improvement. Early stop patience: {epochs_no_improve}/{patience}")
+
+  if epochs_no_improve >= patience:
+    print("Early stopping triggered.")
+    break
+
+wandb.finish()
+
+'''
+
+for epoch in range(NUM_EPOCHS):
+  prgs = tqdm.tqdm(dl, desc=f'Epoch {epoch+1}', leave=False)
+  for i, (ipt, trg) in enumerate(prgs):
+    ipt, trg = ipt.to(dev), trg.to(dev)
+    opFoo.zero_grad()
+    out = mFoo(ipt)
+    loss = criterion(out, trg.squeeze())
+    loss.backward()
+    opFoo.step()
+    wandb.log({'loss': loss.item()})
+    if i % 10_000 == 0: evaluate.topk(mFoo)
+
+  # checkpoint
+  checkpoint_name = f'{ts}.{epoch + 1}.cbow.pth'
+  torch.save(mFoo.state_dict(), f'./checkpoints/{checkpoint_name}')
+  artifact = wandb.Artifact('model-weights', type='model')
+  artifact.add_file(f'./checkpoints/{checkpoint_name}')
+  wandb.log_artifact(artifact)
+
+
+#
+#
+#
+
+'''

@@ -10,7 +10,13 @@ from numpy.typing import NDArray
 
 from huggingface_hub import HfApi
 
+
 '''
+curl -L -O https://huggingface.co/datasets/microsoft/ms_marco/resolve/main/v1.1/test-00000-of-00001.parquet
+curl -L -O https://huggingface.co/datasets/microsoft/ms_marco/resolve/main/v1.1/train-00000-of-00001.parquet
+curl -L -O https://huggingface.co/datasets/microsoft/ms_marco/resolve/main/v1.1/validation-00000-of-00001.parquet
+
+
 Creates the following structure:
 {
     "query": np.ndarray of shape (N, D),
