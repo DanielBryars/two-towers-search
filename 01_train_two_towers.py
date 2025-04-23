@@ -1,4 +1,3 @@
-import tqdm
 import wandb
 import torch
 import dataset

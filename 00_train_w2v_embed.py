@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 from numpy.typing import NDArray
+from tqdm import tqdm
 
 from huggingface_hub import HfApi
 
@@ -86,17 +87,17 @@ def build_triplets(queries, positives, seed=42):
     }
 
 if __name__ == "__main__":
-  hfapi = HfApi(token=os.getenv("HF_TOKEN"))
-
-  print ("loading word2vec model...")
-  model = api.load("word2vec-google-news-300")
-  print ("word2vec model loaded")
-
   if len(sys.argv[1:]) > 0:
      filenames = sys.argv[1:]
   else:
      filenames = ["test-00000-of-00001.parquet", "train-00000-of-00001.parquet","validation-00000-of-00001.parquet"]
 
+  hfapi = HfApi(token=os.getenv("HF_TOKEN"))
+
+  print ("loading word2vec model...")
+  model = api.load("word2vec-google-news-300")
+  print ("word2vec model loaded")
+  
   for filename in filenames:
     print(f"computing embeddings for '{filename}'")
     query_embeddings, positive_embeddings = compute_embeddings(filename, model)
