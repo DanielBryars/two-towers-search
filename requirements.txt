@@ -9,3 +9,4 @@ black
 datasets
 pyarrow
 tqdm
+huggingface_hub
