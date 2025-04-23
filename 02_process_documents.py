@@ -65,7 +65,9 @@ if __name__ == "__main__":
   queryModel, docModel = load_checkpoint(filepath)
 
   #Get all the documents and compute the 
-  parquet_filenames = ["test-00000-of-00001.parquet", "train-00000-of-00001.parquet","validation-00000-of-00001.parquet"]
+  #parquet_filenames = ["test-00000-of-00001.parquet", "train-00000-of-00001.parquet","validation-00000-of-00001.parquet"]
+
+  parquet_filenames = ["test-00000-of-00001.parquet"]
 
   #put all these files into memory 
   total_document_count = 0
@@ -95,7 +97,7 @@ if __name__ == "__main__":
         documents.append(passage)
         i+=1
 
-  pickle_filename = "documentEmbeddings.pkl"
+  pickle_filename = "documentEmbeddings.testonly.pkl"
   with open(pickle_filename, "wb") as f:
     pickle.dump((embeddings, documents), f)
 
