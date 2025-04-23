@@ -1,40 +1,31 @@
-#
-#
-#
 import torch
 import model
 
+import torch
+import os
+
+def load_checkpoint(checkpoint_path):
+    if not os.path.isfile(checkpoint_path):
+        raise FileNotFoundError(f"Checkpoint not found at: {checkpoint_path}")
+
+    docModel = model.DocTower()
+    queryModel = model.QueryTower()
+
+    checkpoint = torch.load(checkpoint_path, map_location='cpu')  # or 'cuda' if using GPU
+    queryModel.load_state_dict(checkpoint['queryModel'])
+    docModel.load_state_dict(checkpoint['docModel'])
+    
+    return queryModel, docModel
+
+
+queryModel, docModel = load_checkpoint("checkpoint/2025_04_23__12_47_41.9.twotower.pth")
+
+print(queryModel)
+print(docModel)
 
 #
-#
-#
 
 
+#bryars-bryars/mlx7-week2-two-towers/model-weights:v24
 
 
-
-cbow = model.CBOW(63642, 128)
-cbow.load_state_dict(torch.load('./checkpoints/2025_04_17__11_04_09.5.cbow.pth'))
-cbow.eval()
-
-
-#
-#
-#
-mReg = model.Regressor()
-opFoo = torch.optim.Adam(mReg.parameters(), lr=0.005)
-
-
-#
-#
-#
-for i in range(100):
-  trg = torch.tensor([[125.]])               # score
-  ipt = torch.tensor([[45, 27, 45367, 456]]) # title
-  emb = cbow.emb(ipt).mean(dim=1)            # avg pool
-  out = mReg(emb)
-  loss = torch.nn.functional.l1_loss(out, trg)
-  loss.backward()
-  opFoo.step()
-  opFoo.zero_grad()
-  print(loss.item())
