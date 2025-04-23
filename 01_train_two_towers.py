@@ -26,10 +26,9 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-def train_one_epoch(queryModel, docModel, dataloader, optimizer, device, epoch, step_offset=0):
+def train_one_epoch(queryModel, docModel, dataloader, optimizer, device, epoch, loss_fn, step_offset=0):
     queryModel.train()
-    docModel.train()
-    loss_fn = TripletMarginLoss(margin=0.2, p=2)
+    docModel.train()    
     step = step_offset
 
     loop = tqdm(dataloader, desc=f"Epoch {epoch} [Train]", leave=False)
@@ -52,11 +51,10 @@ def train_one_epoch(queryModel, docModel, dataloader, optimizer, device, epoch, 
 
     return step
 
-def evaluate(queryModel, docModel, dataloader, device, epoch=None, step=None):
+def evaluate(queryModel, docModel, dataloader, device, loss_fn, epoch=None, step=None):
     queryModel.eval()
     docModel.eval()
-    loss_fn = TripletMarginLoss(margin=0.2, p=2)
-
+    
     total_loss = 0.0
     total_batches = 0
 
@@ -97,19 +95,41 @@ def save_checkpoint(queryModel, docModel, epoch, ts):
     artifact = wandb.Artifact('model-weights', type='model', description='Two-tower model weights')
     artifact.add_file(checkpoint_path)
     wandb.log_artifact(artifact)
+    print(f"Checkpoint saved at {checkpoint_path}")
 
 dataset.download_pickles_from_hugginface()
 set_seed()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ts = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M_%S')
-wandb.init(project='mlx7-week2-two-towers', name=f'{ts}')
+
+
+hyperparameters = {
+        'learning_rate': 2e-5,
+        'weight_decay': 0.01,
+        'batch_size': 512,
+        'num_epochs': 10,        
+        'word2vec_dim': 300,
+        'embedding_dim': 128,
+        'loss_function': 'nn_triplet_margin_loss',
+        'margin':0.2,
+        'p':2,
+        'patience': 3
+}
+
+loss_fn = TripletMarginLoss(margin=hyperparameters['margin'], p=hyperparameters['p'])
+
+wandb.init(
+    project='mlx7-week2-two-towers',
+    name=f'{ts}',
+    config=hyperparameters
+)
 
 train_dataset = dataset.TripletDataset("train-00000-of-00001.parquet.triplet.embeddings.pkl")
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=256)
+train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=hyperparameters['batch_size'])
 
 val_dataset = dataset.TripletDataset("validation-00000-of-00001.parquet.triplet.embeddings.pkl")
-val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=256)
+val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=hyperparameters['batch_size'])
 
 
 queryModel = model.QueryTower()
@@ -123,20 +143,19 @@ print('docModel:params', sum(p.numel() for p in docModel.parameters()))
 
 optimizer = torch.optim.Adam(
     list(queryModel.parameters()) + list(docModel.parameters()), 
-    lr=2e-5, 
-    weight_decay=0.01
+    lr=hyperparameters['learning_rate'], 
+    weight_decay=hyperparameters['weight_decay']
 )
 
-num_epochs = 5
 step = 0
 best_val_loss = float('inf')
 epochs_no_improve = 0
 
-patience=3
+patience= hyperparameters['patience']
 
-for epoch in range(1, num_epochs + 1):
-  step = train_one_epoch(queryModel, docModel, train_loader, optimizer, device, epoch, step_offset=step)
-  val_loss = evaluate(queryModel, docModel, val_loader, device, epoch=epoch, step=step)
+for epoch in range(1, hyperparameters['num_epochs'] + 1):
+  step = train_one_epoch(queryModel, docModel, train_loader, optimizer, device, epoch, loss_fn, step_offset=step)
+  val_loss = evaluate(queryModel, docModel, val_loader, device, loss_fn, epoch=epoch, step=step)
 
   print(f"Epoch {epoch} complete | Val Loss: {val_loss:.4f}")
 
