@@ -1,3 +1,4 @@
+import sys
 import pickle
 import os
 import gensim.downloader as api
@@ -18,39 +19,43 @@ Creates the following structure:
 }
 '''
 
-def text_to_embedding(text: str, model:KeyedVectors) -> NDArray[np.float32]:
+def text_to_embedding(text: str, model: KeyedVectors) -> NDArray[np.float32]:
     words = text.lower().split()
     vectors = [model[word] for word in words if word in model]
-    return np.mean(vectors, axis=0) if vectors else np.zeros(model.vector_size) # type: ignore
+    if not vectors:
+        return np.zeros(model.vector_size, dtype=np.float32)
+    return np.mean(vectors, axis=0).astype(np.float32)
 
 def compute_embeddings(filename, model):
   df = pd.read_parquet(filename)
-  query_embeddings = []
-  positive_embeddings = []
 
-  for _, row in tqdm(df.iterrows(), total=len(df)):
-      query = row['query']
-      positive_matches = row['passages']['passage_text']
+  count = sum(len(row.passages['passage_text']) for row in df.itertuples(index=False)) # type: ignore
+
+  
+  EMBEDDING_SIZE = 300
+  query_embeddings = np.empty((count, EMBEDDING_SIZE), dtype=np.float32)
+  positive_embeddings = np.empty((count, EMBEDDING_SIZE), dtype=np.float32)
+
+  i = 0
+  for row in tqdm(df.itertuples(index=False), total=len(df)):
+      query = row.query
+      positive_matches = row.passages['passage_text'] # type: ignore
       query_embedding = text_to_embedding(query, model)     # type: ignore
       
       for passage in positive_matches:          
         passage_embedding = text_to_embedding(passage, model) # type: ignore
 
         #pair of a query with a positive embedding
-        query_embeddings.append(query_embedding)
-        positive_embeddings.append(passage_embedding)
+        query_embeddings[i]=query_embedding
+        positive_embeddings[i] = passage_embedding
+        i += 1
       
-
   return query_embeddings, positive_embeddings
 
 def build_triplets(queries, positives, seed=42):
     rng = np.random.default_rng(seed)
     N = len(queries)
     
-    queries = np.asarray(queries)
-    positives = np.asarray(positives)
-    
-
     # Shuffle queries and positives together
     indices = rng.permutation(N)
     queries = queries[indices]
@@ -81,10 +86,15 @@ if __name__ == "__main__":
   model = api.load("word2vec-google-news-300")
   print ("word2vec model loaded")
 
-  for filename in ["test-00000-of-00001.parquet", "train-00000-of-00001.parquet","validation-00000-of-00001.parquet"]:
+  if len(sys.argv[1:]) > 0:
+     filenames = sys.argv[1:]
+  else:
+     filenames = ["test-00000-of-00001.parquet", "train-00000-of-00001.parquet","validation-00000-of-00001.parquet"]
+
+  for filename in filenames:
     print(f"computing embeddings for '{filename}'")
     query_embeddings, positive_embeddings = compute_embeddings(filename, model)
-    print("computing embeddings complete")
+    print(f"computing embeddings complete count: {len(query_embeddings)}")
 
     print("building triplets")
     triplets = build_triplets(query_embeddings, positive_embeddings)
@@ -104,7 +114,7 @@ if __name__ == "__main__":
       repo_type="dataset",  # or "model" depending on your use
     )
     print("upload complete")
-    
+
 # Example Load
 #with open("vectors.pkl", "rb") as f:
 #    triplets = pickle.load(f)
