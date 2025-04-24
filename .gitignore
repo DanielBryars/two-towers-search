@@ -89,4 +89,5 @@ Thumbs.db
 # Pre-trained models
 *.bin
 *.gz
-*.parquet
+*.parquet.pth
+2025_04_23__12_47_41.11.twotower.pth
