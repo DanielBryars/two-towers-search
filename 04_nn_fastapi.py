@@ -6,8 +6,12 @@ import numpy as np
 import faiss
 import pickle
 from model import load_checkpoint, text_to_embedding
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 app = FastAPI()
+app.mount("/images", StaticFiles(directory="images"), name="images")
 
 # Global state
 w2v_model = None
@@ -43,6 +47,9 @@ def load_assets():
 
     print("Assets loaded.")
 
+@app.get("/")
+def serve_index():
+    return FileResponse("index.html")
 
 @app.post("/search")
 def search(query: Query):
