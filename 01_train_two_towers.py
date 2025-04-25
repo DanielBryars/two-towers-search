@@ -169,6 +169,7 @@ sweep_config = {
 
 def train():
     with wandb.init(config=hyperparameters):
+        
         config = wandb.config
         # override hyperparameters here with config values
         hyperparameters.update({
@@ -180,52 +181,51 @@ def train():
         })
 
 
-    train_dataset = dataset.TripletDataset("train-00000-of-00001.parquet.triplet.embeddings.pkl")
-    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=hyperparameters['batch_size'])
+        train_dataset = dataset.TripletDataset("train-00000-of-00001.parquet.triplet.embeddings.pkl")
+        train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=hyperparameters['batch_size'])
 
-    val_dataset = dataset.TripletDataset("validation-00000-of-00001.parquet.triplet.embeddings.pkl")
-    val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=hyperparameters['batch_size'])
+        val_dataset = dataset.TripletDataset("validation-00000-of-00001.parquet.triplet.embeddings.pkl")
+        val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=hyperparameters['batch_size'])
 
 
-    queryModel = model.QueryTower()
-    docModel = model.DocTower()
+        queryModel = model.QueryTower()
+        docModel = model.DocTower()
 
-    queryModel.to(device)
-    docModel.to(device)
+        queryModel.to(device)
+        docModel.to(device)
 
-    print('queryModel:params', sum(p.numel() for p in queryModel.parameters()))
-    print('docModel:params', sum(p.numel() for p in docModel.parameters()))
+        print('queryModel:params', sum(p.numel() for p in queryModel.parameters()))
+        print('docModel:params', sum(p.numel() for p in docModel.parameters()))
 
-    optimizer = torch.optim.Adam(
-        list(queryModel.parameters()) + list(docModel.parameters()), 
-        lr=hyperparameters['learning_rate'], 
-        weight_decay=hyperparameters['weight_decay']
-    )
+        optimizer = torch.optim.Adam(
+            list(queryModel.parameters()) + list(docModel.parameters()), 
+            lr=hyperparameters['learning_rate'], 
+            weight_decay=hyperparameters['weight_decay']
+        )
 
-    step = 0
-    best_val_loss = float('inf')
-    epochs_no_improve = 0
+        step = 0
+        best_val_loss = float('inf')
+        epochs_no_improve = 0
 
-    patience= hyperparameters['patience']
+        patience= hyperparameters['patience']
 
-    for epoch in range(1, hyperparameters['num_epochs'] + 1):
-        step = train_one_epoch(queryModel, docModel, train_loader, optimizer, device, epoch, loss_fn, step_offset=step)
-        val_loss = evaluate(queryModel, docModel, val_loader, device, loss_fn, epoch=epoch, step=step)
+        for epoch in range(1, hyperparameters['num_epochs'] + 1):
+            step = train_one_epoch(queryModel, docModel, train_loader, optimizer, device, epoch, loss_fn, step_offset=step)
+            val_loss = evaluate(queryModel, docModel, val_loader, device, loss_fn, epoch=epoch, step=step)
 
-        print(f"Epoch {epoch} complete | Val Loss: {val_loss:.4f}")
+            print(f"Epoch {epoch} complete | Val Loss: {val_loss:.4f}")
 
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            epochs_no_improve = 0
-            save_checkpoint(queryModel, docModel, epoch, ts)
-        else:
-            epochs_no_improve += 1
-            print(f"No improvement. Early stop patience: {epochs_no_improve}/{patience}")
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                epochs_no_improve = 0
+                save_checkpoint(queryModel, docModel, epoch, ts)
+            else:
+                epochs_no_improve += 1
+                print(f"No improvement. Early stop patience: {epochs_no_improve}/{patience}")
 
-        if epochs_no_improve >= patience:
-            print("Early stopping triggered.")
-            break
-
+            if epochs_no_improve >= patience:
+                print("Early stopping triggered.")
+                break
 
 sweep_id = wandb.sweep(sweep_config, project='mlx7-week2-two-towers')
 wandb.agent(sweep_id, function=train)
