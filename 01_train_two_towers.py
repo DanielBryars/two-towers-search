@@ -153,13 +153,13 @@ sweep_config = {
     },
     'parameters': {
         'learning_rate': {
-            'values': [1e-4, 2e-5, 5e-6]
+            'values': [0.0001]#[1e-4, 2e-5, 5e-6]
         },
         'weight_decay': {
-            'values': [0.01, 0.001]
+            'values': [0.01] #[0.01, 0.001
         },
         'margin': {
-            'values': [0.2, 0.3]
+            'values': [0.3]#[0.2, 0.3]
         }
     }
 }
