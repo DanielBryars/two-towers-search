@@ -18,6 +18,7 @@ documents = None
 class Query(BaseModel):
     text: str
 
+#uvicorn 04_nn_fastapi:app --reload --host 0.0.0.0 --port 8000
 
 @app.on_event("startup")
 def load_assets():
@@ -27,7 +28,7 @@ def load_assets():
     print(f"Loading Word2Vec model '{word2VecModelName}' ...")
     w2v_model = api.load("word2vec-google-news-300")
 
-    querymodel_filename = "2checkpoints/ts.2025_04_25__11_28_01.epoch.5.twotower.pth"
+    querymodel_filename = "checkpoints/ts.2025_04_25__11_28_01.epoch.5.twotower.pth"
     print(f"Loading query model '{querymodel_filename}'...")
     query_model, _ = load_checkpoint(querymodel_filename)
 
