@@ -23,14 +23,17 @@ class Query(BaseModel):
 def load_assets():
     global w2v_model, query_model, index, documents
 
-    print("Loading Word2Vec model...")
+    word2VecModelName = "word2vec-google-news-300"
+    print(f"Loading Word2Vec model '{word2VecModelName}' ...")
     w2v_model = api.load("word2vec-google-news-300")
 
-    print("Loading query model...")
-    query_model, _ = load_checkpoint("2025_04_23__12_47_41.11.twotower.pth")
+    querymodel_filename = "2checkpoints/ts.2025_04_25__11_28_01.epoch.5.twotower.pth"
+    print(f"Loading query model '{querymodel_filename}'...")
+    query_model, _ = load_checkpoint(querymodel_filename)
 
-    print("Loading document embeddings...")
-    with open("documentEmbeddings.pkl", "rb") as f:
+    documentEmbeddings_filepath = "documentEmbeddings.v2.pkl"
+    print(f"Loading document embeddings '{documentEmbeddings_filepath}'...")
+    with open(documentEmbeddings_filepath, "rb") as f:
         embeddings, documents = pickle.load(f)
 
     embeddings = embeddings.astype("float32")
