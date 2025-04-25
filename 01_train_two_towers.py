@@ -155,14 +155,8 @@ sweep_config = {
         'weight_decay': {
             'values': [0.01, 0.001]
         },
-        'embedding_dim': {
-            'values': [64, 128]
-        },
         'margin': {
             'values': [0.2, 0.3]
-        },
-        'batch_size': {
-            'values': [128, 512]
         }
     }
 }
@@ -174,10 +168,8 @@ def train():
         # override hyperparameters here with config values
         hyperparameters.update({
             'learning_rate': config.learning_rate,
-            'weight_decay': config.weight_decay,
-            'embedding_dim': config.embedding_dim,
-            'margin': config.margin,
-            'batch_size': config.batch_size,
+            'weight_decay': config.weight_decay,            
+            'margin': config.margin
         })
 
 
