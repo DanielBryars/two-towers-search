@@ -81,7 +81,8 @@ def save_checkpoint(queryModel, docModel, epoch, ts):
     checkpoint_dir = './checkpoints'
     os.makedirs(checkpoint_dir, exist_ok=True)
 
-    checkpoint_name = f'{ts}.{epoch + 1}.twotower.pth'
+    descriptive_name = f'ts.{ts}.epoch.{epoch + 1}.twotower'
+    checkpoint_name = f'{descriptive_name}.pth'
     checkpoint_path = os.path.join(checkpoint_dir, checkpoint_name)
 
     torch.save({
@@ -91,30 +92,17 @@ def save_checkpoint(queryModel, docModel, epoch, ts):
     }, checkpoint_path)
 
     # Create wandb artifact and log it
-    artifact = wandb.Artifact('model-weights', type='model', description='Two-tower model weights')
-    artifact.add_file(checkpoint_path)
-    wandb.log_artifact(artifact)
-    print(f"Checkpoint saved at {checkpoint_path}")
+    artifact = wandb.Artifact(
+    name=descriptive_name,
+    type='model',
+    description=f'Two-tower model weights from epoch {epoch + 1}, timestamp {ts}'
+)
 
 dataset.download_pickles_from_hugginface()
 set_seed()
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 ts = datetime.datetime.now().strftime('%Y_%m_%d__%H_%M_%S')
-
-
-hyperparameters = {
-        'learning_rate': 2e-5,
-        'weight_decay': 0.01,
-        'batch_size': 512,
-        'num_epochs': 10,        
-        'word2vec_dim': 300,
-        'embedding_dim': 128,
-        'loss_function': 'contrastive_cosine_loss',#'nn_triplet_margin_loss',
-        'margin':0.2,
-        'p':2,
-        'patience': 3
-}
 
 def contrastive_cosine_loss(query, positive, negative, margin=0.2):
     """
@@ -140,56 +128,104 @@ def contrastive_cosine_loss(query, positive, negative, margin=0.2):
 
 loss_fn = contrastive_cosine_loss
 
-wandb.init(
-    project='mlx7-week2-two-towers',
-    name=f'{ts}',
-    config=hyperparameters
-)
 
-train_dataset = dataset.TripletDataset("train-00000-of-00001.parquet.triplet.embeddings.pkl")
-train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=hyperparameters['batch_size'])
+hyperparameters = {
+        'learning_rate': 2e-5,
+        'weight_decay': 0.01,
+        'batch_size': 512,
+        'num_epochs': 5,        
+        'word2vec_dim': 300,
+        'embedding_dim': 128,
+        'loss_function': 'contrastive_cosine_loss',#'nn_triplet_margin_loss',
+        'margin':0.2,
+        'p':2,
+        'patience': 3
+}
 
-val_dataset = dataset.TripletDataset("validation-00000-of-00001.parquet.triplet.embeddings.pkl")
-val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=hyperparameters['batch_size'])
+sweep_config = {
+    'method': 'grid',  # or 'random', 'bayes'
+    'metric': {
+        'name': 'val/loss',
+        'goal': 'minimize'
+    },
+    'parameters': {
+        'learning_rate': {
+            'values': [1e-4, 2e-5, 5e-6]
+        },
+        'weight_decay': {
+            'values': [0.01, 0.001]
+        },
+        'embedding_dim': {
+            'values': [64, 128]
+        },
+        'margin': {
+            'values': [0.2, 0.3]
+        },
+        'batch_size': {
+            'values': [128, 512]
+        }
+    }
+}
+
+def train():
+    with wandb.init(config=hyperparameters):
+        config = wandb.config
+        # override hyperparameters here with config values
+        hyperparameters.update({
+            'learning_rate': config.learning_rate,
+            'weight_decay': config.weight_decay,
+            'embedding_dim': config.embedding_dim,
+            'margin': config.margin,
+            'batch_size': config.batch_size,
+        })
 
 
-queryModel = model.QueryTower()
-docModel = model.DocTower()
+    train_dataset = dataset.TripletDataset("train-00000-of-00001.parquet.triplet.embeddings.pkl")
+    train_loader = torch.utils.data.DataLoader(dataset=train_dataset, batch_size=hyperparameters['batch_size'])
 
-queryModel.to(device)
-docModel.to(device)
+    val_dataset = dataset.TripletDataset("validation-00000-of-00001.parquet.triplet.embeddings.pkl")
+    val_loader = torch.utils.data.DataLoader(dataset=val_dataset, batch_size=hyperparameters['batch_size'])
 
-print('queryModel:params', sum(p.numel() for p in queryModel.parameters()))
-print('docModel:params', sum(p.numel() for p in docModel.parameters()))
 
-optimizer = torch.optim.Adam(
-    list(queryModel.parameters()) + list(docModel.parameters()), 
-    lr=hyperparameters['learning_rate'], 
-    weight_decay=hyperparameters['weight_decay']
-)
+    queryModel = model.QueryTower()
+    docModel = model.DocTower()
 
-step = 0
-best_val_loss = float('inf')
-epochs_no_improve = 0
+    queryModel.to(device)
+    docModel.to(device)
 
-patience= hyperparameters['patience']
+    print('queryModel:params', sum(p.numel() for p in queryModel.parameters()))
+    print('docModel:params', sum(p.numel() for p in docModel.parameters()))
 
-for epoch in range(1, hyperparameters['num_epochs'] + 1):
-  step = train_one_epoch(queryModel, docModel, train_loader, optimizer, device, epoch, loss_fn, step_offset=step)
-  val_loss = evaluate(queryModel, docModel, val_loader, device, loss_fn, epoch=epoch, step=step)
+    optimizer = torch.optim.Adam(
+        list(queryModel.parameters()) + list(docModel.parameters()), 
+        lr=hyperparameters['learning_rate'], 
+        weight_decay=hyperparameters['weight_decay']
+    )
 
-  print(f"Epoch {epoch} complete | Val Loss: {val_loss:.4f}")
-
-  if val_loss < best_val_loss:
-    best_val_loss = val_loss
+    step = 0
+    best_val_loss = float('inf')
     epochs_no_improve = 0
-    save_checkpoint(queryModel, docModel, epoch, ts)
-  else:
-    epochs_no_improve += 1
-    print(f"No improvement. Early stop patience: {epochs_no_improve}/{patience}")
 
-  if epochs_no_improve >= patience:
-    print("Early stopping triggered.")
-    break
+    patience= hyperparameters['patience']
 
-wandb.finish()
+    for epoch in range(1, hyperparameters['num_epochs'] + 1):
+        step = train_one_epoch(queryModel, docModel, train_loader, optimizer, device, epoch, loss_fn, step_offset=step)
+        val_loss = evaluate(queryModel, docModel, val_loader, device, loss_fn, epoch=epoch, step=step)
+
+        print(f"Epoch {epoch} complete | Val Loss: {val_loss:.4f}")
+
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            epochs_no_improve = 0
+            save_checkpoint(queryModel, docModel, epoch, ts)
+        else:
+            epochs_no_improve += 1
+            print(f"No improvement. Early stop patience: {epochs_no_improve}/{patience}")
+
+        if epochs_no_improve >= patience:
+            print("Early stopping triggered.")
+            break
+
+
+sweep_id = wandb.sweep(sweep_config, project='mlx7-week2-two-towers')
+wandb.agent(sweep_id, function=train)
