@@ -35,7 +35,7 @@ def load_assets():
 
     embeddings = embeddings.astype("float32")
     index = faiss.IndexFlatL2(128)
-    index.add(embeddings)
+    index.add(embeddings) # type: ignore
 
     print("Assets loaded.")
 
@@ -45,16 +45,16 @@ def search(query: Query):
     global w2v_model, query_model, index, documents
 
     # Embed query
-    q_embed = text_to_embedding(query.text, w2v_model)
+    q_embed = text_to_embedding(query.text, w2v_model) # type: ignore
     with torch.no_grad():
         q_tensor = torch.from_numpy(q_embed).unsqueeze(0)
-        q_embed = query_model(q_tensor).squeeze(0).numpy().reshape(1, -1).astype("float32")
+        q_embed = query_model(q_tensor).squeeze(0).numpy().reshape(1, -1).astype("float32") # type: ignore
 
     # Search
-    distances, indices = index.search(q_embed, k=10)
+    distances, indices = index.search(q_embed, k=10) # type: ignore
 
     results = [
-        {"document": documents[i], "distance": float(d)}
+        {"document": documents[i], "distance": float(d)} # type: ignore
         for i, d in zip(indices[0], distances[0])
     ]
     return {"results": results}

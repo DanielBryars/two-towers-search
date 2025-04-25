@@ -12,3 +12,4 @@ tqdm
 huggingface_hub
 faiss-cpu
 fastapi
+uvicorn
