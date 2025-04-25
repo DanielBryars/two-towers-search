@@ -107,7 +107,7 @@ if __name__ == "__main__":
         batch_embeddings = docModel(batch_tensor).cpu().numpy()
     embeddings[batch_indices] = batch_embeddings
 
-  pickle_filename = "documentEmbeddings.testonly.pkl"
+  pickle_filename = "documentEmbeddings.v2.pkl"
   with open(pickle_filename, "wb") as f:
     pickle.dump((embeddings, documents), f)
 
