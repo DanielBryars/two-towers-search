@@ -93,10 +93,13 @@ def save_checkpoint(queryModel, docModel, epoch, ts):
 
     # Create wandb artifact and log it
     artifact = wandb.Artifact(
-    name=descriptive_name,
-    type='model',
-    description=f'Two-tower model weights from epoch {epoch + 1}, timestamp {ts}'
-)
+        name=descriptive_name,
+        type='model',
+        description=f'Two-tower model weights from epoch {epoch + 1}, timestamp {ts}')
+    
+    #actually upload the artifact!!!!
+    artifact.add_file(checkpoint_path)
+    wandb.log_artifact(artifact)
 
 dataset.download_pickles_from_hugginface()
 set_seed()

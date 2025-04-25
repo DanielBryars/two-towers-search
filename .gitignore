@@ -91,3 +91,4 @@ Thumbs.db
 *.gz
 *.parquet.pth
 2025_04_23__12_47_41.11.twotower.pth
+test-00000-of-00001.parquet

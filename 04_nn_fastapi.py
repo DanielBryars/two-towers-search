@@ -15,7 +15,6 @@ query_model = None
 index = None
 documents = None
 
-
 class Query(BaseModel):
     text: str
 
