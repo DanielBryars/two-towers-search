@@ -41,9 +41,17 @@ def load_assets():
     with open(documentEmbeddings_filepath, "rb") as f:
         embeddings, documents = pickle.load(f)
 
+    print("document embeddings loaded")
+
+    print("Document embeddings shape:", embeddings.shape)
+    print("Sample document embedding:", embeddings[0])
+    print("Mean norm of document embeddings:", np.mean(np.linalg.norm(embeddings, axis=1)))
+
+
     embeddings = embeddings.astype("float32")
     index = faiss.IndexFlatL2(128)
     index.add(embeddings) # type: ignore
+    print("Index total vectors:", index.ntotal)
 
     print("Assets loaded.")
 
@@ -57,15 +65,22 @@ def search(query: Query):
 
     # Embed query
     q_embed = text_to_embedding(query.text, w2v_model) # type: ignore
+    print("query embedding calculated by word2vec")
+    print("Query embedding (w2v) norm:", np.linalg.norm(q_embed)) 
+
     with torch.no_grad():
         q_tensor = torch.from_numpy(q_embed).unsqueeze(0)
         q_embed = query_model(q_tensor).squeeze(0).numpy().reshape(1, -1).astype("float32") # type: ignore
 
-    # Search
-    distances, indices = index.search(q_embed, k=10) # type: ignore
+        print("query embedding calculated by two towers")
+        print("Query embedding (TT) norm:", np.linalg.norm(q_embed)) 
 
-    results = [
-        {"document": documents[i], "distance": float(d)} # type: ignore
-        for i, d in zip(indices[0], distances[0])
-    ]
-    return {"results": results}
+        # Search
+        distances, indices = index.search(q_embed, k=10) # type: ignore
+
+        results = [
+            {"document": documents[i], "distance": float(d)} # type: ignore
+            for i, d in zip(indices[0], distances[0])
+        ]
+    
+        return {"results": results}

@@ -25,11 +25,16 @@ if __name__ == "__main__":
       embeddings, documents = pickle.load(f)
    print("document embeddings loaded")
 
+   print("Document embeddings shape:", embeddings.shape)
+   print("Sample document embedding:", embeddings[0])
+   print("Mean norm of document embeddings:", np.mean(np.linalg.norm(embeddings, axis=1)))
+
    print("building index...")
-   embeddings = embeddings.astype('float32')
+   embeddings = embeddings.astype('float32')   
    index = faiss.IndexFlatL2(128)
-   index.add(embeddings)
+   index.add(embeddings) # type: ignore
    print("index built")
+   print("Index total vectors:", index.ntotal)
 
    while True:
       query = input("🔍 Query: ").strip()
@@ -45,15 +50,16 @@ if __name__ == "__main__":
       print("calculating query embedding...")
       query_embedding = text_to_embedding(query, w2v_model)  # type: ignore
       with torch.no_grad():
-         query_tensor = torch.from_numpy(query_embedding).unsqueeze(0)  # (1, 300)
-         query_embedding = queryModel(query_tensor).squeeze(0).numpy()
-      print("query embedding calculated")
+        query_tensor = torch.from_numpy(query_embedding).unsqueeze(0)  # (1, 300)
+        query_embedding = queryModel(query_tensor).squeeze(0).numpy()
+        print("query embedding calculated")
+        print("Query embedding norm:", np.linalg.norm(query_embedding))  
 
-      query_embedding = query_embedding.reshape(1, -1)  # (1, 128)
-      distances, indices = index.search(query_embedding, k=10)
+        query_embedding = query_embedding.reshape(1, -1)  # (1, 128)
+        distances, indices = index.search(query_embedding, k=10)
 
-      for i, (doc_idx, dist) in enumerate(zip(indices[0], distances[0])):
-         print(f"{i+1:2d}. Distance: {dist:.4f}")
-         print(f"{i}: --------------------------------")
-         print(f"{documents[doc_idx]}")
-         print("--------------------------------")
+        for i, (doc_idx, dist) in enumerate(zip(indices[0], distances[0])):
+            print(f"{i+1:2d}. Distance: {dist:.4f}")
+            print(f"{i}: --------------------------------")
+            print(f"{documents[doc_idx]}")
+            print("--------------------------------")
