@@ -28,7 +28,7 @@ if __name__ == "__main__":
   if len(sys.argv[1:]) > 0:
      filepath = sys.argv[1]
   else:
-     filepath = "checkpoints/ts.2025_04_25__11_28_01.epoch.5.twotower"
+     filepath = "checkpoints/ts.2025_04_25__11_28_01.epoch.5.twotower.pth"
 
   hfapi = HfApi(token=os.getenv("HF_TOKEN"))
 
